@@ -1,0 +1,7 @@
+version: 2
+
+sources:
+  - name: github
+    schema: raw
+    tables:
+      - name: github_pull_requests
