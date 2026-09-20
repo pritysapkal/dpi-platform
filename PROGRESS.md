@@ -45,8 +45,15 @@ Focus: ONE data entity (Pull Requests) taken all the way through the full pipeli
 - README.md fully rewritten (was still dbt-init boilerplate) — architecture diagram (all 8 stages: source → ingestion → warehouse → staging → intermediate → marts → semantic layer → dashboard), data dictionary for mart_dora_metrics_daily, test-to-real-bug table, 7-point known-limitations/at-scale section, and a local run guide.
 
 ## Locked Scope Status
-All 5 locked-in scope items are complete: built, verified locally (`dbt build` passes 20/20), pushed, and CI confirmed green on GitHub (run #2, commit f1cd57e). The locked-in 8-9/10 portfolio scope from this file is now fully delivered.
+All 5 locked-in scope items are complete: built, verified locally (`dbt build` passes 20/20), pushed, and CI confirmed green on GitHub (run #2, commit f1cd57e). The locked-in 8-9/10 portfolio scope from this file is fully delivered.
+
+## New Addition: Dashboard (beyond locked scope, added by request)
+- [x] Attempted Evidence.dev first, as originally requested. Discovered its default scaffolding tool now installs "Evidence Studio," a hosted commercial product whose no-login/no-data-copy connectors are limited to Snowflake/Fabric/ClickHouse/BigQuery — no local DuckDB file support at all. The classic open-source, DuckDB-native Evidence still exists on npm but its docs have been fully replaced by the new product's, making setup an undocumented reverse-engineering exercise rather than a supported path. Flagged this to the user as a real blocker rather than silently working around it or picking a path that contradicted "no data duplication."
+- [x] Built dashboard/app.py instead — a single-page Streamlit dashboard, read-only connection to dev.duckdb (won't lock the file against dbt), querying mart_dora_metrics_daily directly with no recomputation in Python. Three summary tiles (Total PRs Merged, Avg Lead Time hrs, Days Tracked) plus two line charts (Deployment Frequency, Lead Time for Changes) each with a plain-language caption on what a healthy trend looks like.
+- [x] Verified with real data: `streamlit.testing.v1.AppTest` run against the live app confirmed no exceptions and correct values — 269 total merged PRs, 258.2 avg lead-time hours, 1,114 days tracked (all matching previously-validated mart numbers exactly). Also manually confirmed the running server responds (HTTP 200 on localhost:8501).
+- [x] dashboard/requirements.txt (streamlit==1.64.0, duckdb==1.5.5) and dashboard/README.md (one-line run instructions) added.
+- [x] Main README.md updated: architecture diagram now names the dashboard stage explicitly, a new "Dashboard" section explains the Evidence.dev pivot and how to run it, "Running it locally" includes the dashboard command, and a known-limitations bullet notes it's a script (no auth/sharing), not a full BI tool.
 
 ## Next Immediate Step
-- Review README.md tone/wording to make sure it reads as your own voice, not mine — the only remaining open item
-- Everything else in the locked scope is done; any further work is a deliberate new addition, not a gap
+- Review README.md tone/wording to make sure it reads as your own voice, not mine — the one remaining open item across the whole project
+- Everything else, including the dashboard, is done; any further work is a deliberate new addition, not a gap

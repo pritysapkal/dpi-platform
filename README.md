@@ -20,7 +20,7 @@ flowchart LR
     ST --> INT["Intermediate<br/>int_pr_lifecycle"]
     INT --> M["Marts<br/>mart_dora_metrics_daily"]
     M --> SEM["Semantic Layer<br/>MetricFlow<br/>deployment_frequency, lead_time_for_changes"]
-    SEM --> DASH["Dashboard / BI tool"]
+    SEM --> DASH["Dashboard<br/>Streamlit — dashboard/app.py"]
 ```
 
 - **Ingestion** (`fetch_prs.py`) — pulls the 500 most recent PRs on `encode/httpx`
@@ -40,6 +40,9 @@ flowchart LR
 - **Semantic layer** — `deployment_frequency` and `lead_time_for_changes`
   defined as MetricFlow metrics on top of the mart, queryable via `mf query`
   instead of being hardcoded SQL.
+- **Dashboard** (`dashboard/app.py`) — a single-page Streamlit app that reads
+  `mart_dora_metrics_daily` directly out of `dev.duckdb`, read-only. No BI
+  tool, no data copy — see [Dashboard](#dashboard) below for why.
 
 ## Data dictionary — `mart_dora_metrics_daily`
 
@@ -76,6 +79,34 @@ mf query --metrics deployment_frequency,lead_time_for_changes --group-by metric_
 Building the semantic model on the pre-aggregated mart (rather than on
 `int_pr_lifecycle` at PR grain) was a deliberate scope tradeoff — see below.
 
+## Dashboard
+
+**Why a custom Streamlit dashboard instead of a BI tool:** the original plan
+was [Evidence.dev](https://evidence.dev). It turns out "Evidence.dev" now
+means two different products. The one its own scaffolding tool installs by
+default — Evidence Studio — is a hosted commercial product whose only
+login-free, no-data-copy connectors are Snowflake, Fabric, ClickHouse, and
+BigQuery; a local DuckDB file isn't a supported data source at all. Getting
+data in any other way means creating an account and uploading it into
+Evidence's cloud-managed warehouse — the opposite of "read the existing
+warehouse, don't duplicate it." The classic open-source, DuckDB-native
+version of Evidence still exists on npm, but its docs have been fully
+replaced by the new product's, so standing it up would mean reverse-engineering
+undocumented config from source rather than following a supported path. Given
+that, a ~70-line Streamlit script reading DuckDB directly was the more
+reliable choice for something this small.
+
+**Running it:**
+
+```
+cd dashboard
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+Opens at http://localhost:8501. Connects read-only, so it's safe to leave
+running while `dbt build` runs elsewhere (results refresh within 60 seconds).
+
 ## Known limitations / what I'd do at scale
 
 - **Deployment Frequency is a proxy.** There's no real deployment/release event
@@ -110,6 +141,11 @@ Building the semantic model on the pre-aggregated mart (rather than on
   recurring schedule. At scale it would run on a schedule (Airflow, Dagster,
   or even a cron-triggered GitHub Actions workflow) so the marts and metrics
   stay fresh independent of code changes.
+- **The dashboard is a script, not a BI tool.** No auth, no sharing link, no
+  multi-user access — you run it locally and it's just for you. At scale I'd
+  either revisit a real BI/semantic-layer-aware tool (once one exists with a
+  sane local/self-hosted DuckDB story) or put this behind a small deployed
+  service if others need to view it.
 
 ## Running it locally
 
@@ -119,4 +155,5 @@ export GH_TOKEN=your_github_pat        # any public-repo-read token works
 python fetch_prs.py                    # pulls fresh PR + review data
 dbt build                              # runs every model + test
 mf list metrics                        # semantic layer, once dbt-metricflow is installed
+cd dashboard && pip install -r requirements.txt && streamlit run app.py   # dashboard, see below
 ```
