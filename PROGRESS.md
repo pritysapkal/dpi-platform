@@ -29,7 +29,7 @@ Focus: ONE data entity (Pull Requests) taken all the way through the full pipeli
 
 4. **Working CI/CD**
    - [x] .github/workflows/ci.yml that actually runs dbt build + dbt test on push
-   - [x] Must show a real passing (green) run on GitHub, not just exist unused — GH_TOKEN repo secret added 2026-09-20; this commit re-triggers the workflow with the secret available
+   - [x] Must show a real passing (green) run on GitHub, not just exist unused — **confirmed green**: run #2 on commit f1cd57e, "Success", 3m 45s (2026-09-20)
 
 5. **Real documentation**
    - [x] README with: architecture diagram (Mermaid ok), data dictionary for the mart columns, "known limitations / what I'd do at scale" section
@@ -45,9 +45,8 @@ Focus: ONE data entity (Pull Requests) taken all the way through the full pipeli
 - README.md fully rewritten (was still dbt-init boilerplate) — architecture diagram (all 8 stages: source → ingestion → warehouse → staging → intermediate → marts → semantic layer → dashboard), data dictionary for mart_dora_metrics_daily, test-to-real-bug table, 7-point known-limitations/at-scale section, and a local run guide.
 
 ## Locked Scope Status
-All 5 locked-in scope items are built, verified locally (`dbt build` passes 20/20), and pushed (commit f0fe169). GH_TOKEN secret is now configured on GitHub — this commit's push should produce the first real green CI run.
+All 5 locked-in scope items are complete: built, verified locally (`dbt build` passes 20/20), pushed, and CI confirmed green on GitHub (run #2, commit f1cd57e). The locked-in 8-9/10 portfolio scope from this file is now fully delivered.
 
 ## Next Immediate Step
-- Confirm the CI run on GitHub actually goes green now that GH_TOKEN is configured (check the Actions tab)
-- Review README.md tone/wording to make sure it reads as your own voice, not mine
-- Once CI is confirmed green, this locked-in scope is complete
+- Review README.md tone/wording to make sure it reads as your own voice, not mine — the only remaining open item
+- Everything else in the locked scope is done; any further work is a deliberate new addition, not a gap
