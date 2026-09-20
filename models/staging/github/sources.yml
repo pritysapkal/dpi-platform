@@ -5,3 +5,4 @@ sources:
     schema: raw
     tables:
       - name: github_pull_requests
+      - name: github_pr_reviews
