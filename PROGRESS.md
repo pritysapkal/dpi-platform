@@ -6,6 +6,10 @@
 - sources.yml + stg_github__pull_requests.sql created and verified working (table: main.stg_github__pull_requests)
 - stg_github__pr_reviews.sql created and verified working (table: main.stg_github__pr_reviews) — one row per review, cast submitted_at to timestamp
 - int_pr_lifecycle.sql (intermediate layer) built and verified — one row per PR (grain confirmed: 500 rows, 500 distinct pr_number), left-joins a review_rollup CTE (reviews aggregated per PR to avoid fan-out) onto the PR base. Computes review_wait_hours (opened → first review), time_in_review_hours (first review → merge, null-guarded so post-merge reviews don't produce negative durations), lead_time_hours (opened → merged, feeds the future DORA mart), and pr_lifecycle_stage (merged / closed_without_merge / open). Verified no negative durations anywhere.
+- Removed leftover models/example/ dbt-init scaffold (dummy models + generic tests) that was polluting dbt build/test runs; set per-layer materialization in dbt_project.yml (staging/intermediate = view, marts = table)
+- mart_dora_metrics_daily.sql built and verified — one row per calendar day (1,114 days, full date spine so zero-merge days show 0 instead of a missing row) with deployment_frequency (merges that day) and avg_lead_time_hours (rounded avg of lead_time_hours for that day's merges, null on zero-merge days — not 0). Verified SUM(deployment_frequency) = 269 matches total merged PRs exactly; no negative avg_lead_time_hours.
+- dbt tests added across all 4 models (schema.yml per layer) — unique/not_null on every model's primary key, plus a custom non_negative generic test macro (macros/generic_tests.sql) applied to review_wait_hours and lead_time_hours, documented with the real bug it'd catch (timestamp parsing / source anomaly corrupting the Lead Time DORA metric). `dbt build` passes 17/17 (4 models + 13 tests).
+- Semantic layer built: models/marts/dora_metrics.yml defines the dora_metrics_daily semantic model (on mart_dora_metrics_daily) and the deployment_frequency + lead_time_for_changes metrics. Added models/metricflow_time_spine.sql (+ explicit time_spine YAML config, required by MetricFlow) and installed dbt-metricflow in the venv. Verified via `mf list metrics` (both show up) and `mf query --metrics deployment_frequency,lead_time_for_changes --group-by metric_time__month` (real monthly numbers matching the mart). Known caveat, documented in the YAML: lead_time_for_changes is an average of mart_dora_metrics_daily's daily averages (day-weighted), not a true PR-weighted average — a tradeoff of building the semantic layer on a pre-aggregated mart. Local note: `mf` CLI needs `PYTHONIOENCODING=utf-8` + explicit `DBT_PROFILES_DIR` to run on Windows (unrelated tooling bug in halo/colorama, not a project issue).
 
 ## Target Scope for 8-9/10 Analytics Engineering Portfolio (Locked In — Don't Expand Beyond This)
 
@@ -14,27 +18,36 @@ Focus: ONE data entity (Pull Requests) taken all the way through the full pipeli
 1. **Multi-layer modeling**
    - [x] Switch from octocat/Hello-World to a real, active open-source repo (500+ PRs) — now encode/httpx
    - [x] Build int_pr_lifecycle.sql — PR journey: opened → reviewed → merged, using proper intermediate-layer logic
-   - [ ] Build mart_dora_metrics_daily.sql — at least 2 DORA metrics (Deployment Frequency + Lead Time for Changes)
+   - [x] Build mart_dora_metrics_daily.sql — at least 2 DORA metrics (Deployment Frequency + Lead Time for Changes)
 
 2. **Meaningful dbt tests**
-   - Not just generic unique/not_null — include at least 1-2 business-rule tests (e.g., review_wait_hours >= 0)
-   - Document in README/comments what real issue each test would catch
+   - [x] Not just generic unique/not_null — include at least 1-2 business-rule tests (e.g., review_wait_hours >= 0)
+   - [x] Document in README/comments what real issue each test would catch
 
 3. **Semantic layer (MetricFlow)**
-   - Define the 2 DORA metrics as code using dbt's MetricFlow, not just raw SQL in the mart
+   - [x] Define the 2 DORA metrics as code using dbt's MetricFlow, not just raw SQL in the mart
 
 4. **Working CI/CD**
-   - .github/workflows/ci.yml that actually runs dbt build + dbt test on push
-   - Must show a real passing (green) run on GitHub, not just exist unused
+   - [x] .github/workflows/ci.yml that actually runs dbt build + dbt test on push
+   - [ ] Must show a real passing (green) run on GitHub, not just exist unused — blocked on GH_TOKEN repo secret + an actual push (see note below)
 
 5. **Real documentation**
-   - README with: architecture diagram (Mermaid ok), data dictionary for the mart columns, "known limitations / what I'd do at scale" section
-   - Written in own words — not ghostwritten/templated
+   - [x] README with: architecture diagram (Mermaid ok), data dictionary for the mart columns, "known limitations / what I'd do at scale" section
+   - [x] Written in own words — not ghostwritten/templated (drafted this session — read it over and adjust tone/wording to sound like you before treating it as final)
 
 ## Explicitly Out of Scope (Don't Add These — They Dilute Analytics Engineering Positioning)
 - AI-assisted PR classification
 - Predictive ML modeling (e.g., predicting MTTR)
 - Multiple additional data sources (commits, issues, workflows) — one entity done deeply > many done shallowly
 
+- .github/workflows/ci.yml added — on every push and every PR to main, it checks out the repo, installs requirements.txt, writes a dbt profile pointing at a fresh dev.duckdb, re-runs fetch_prs.py to pull current PR+review data from GitHub (not a stale snapshot), then runs `dbt build` (models + tests together) as the pass/fail gate. requirements.txt added (dbt-core, dbt-duckdb, duckdb, httpx, pandas, all pinned to locally-verified versions).
+  - **To actually go green on GitHub: add a repo secret named `GH_TOKEN`** (Settings → Secrets and variables → Actions → New repository secret) with a GitHub PAT that has read access to encode/httpx (a public repo, so a token with no special scopes works — just needs to exist so GitHub's API rate limit is the higher authenticated one, not the ~60/hr unauthenticated limit fetch_prs.py would hit immediately). Without this secret, the fetch_prs.py step fails fast with "GH_TOKEN not set."
+- README.md fully rewritten (was still dbt-init boilerplate) — architecture diagram (all 8 stages: source → ingestion → warehouse → staging → intermediate → marts → semantic layer → dashboard), data dictionary for mart_dora_metrics_daily, test-to-real-bug table, 7-point known-limitations/at-scale section, and a local run guide.
+
+## Locked Scope Status
+All 5 locked-in scope items are now built and verified locally (`dbt build` passes 20/20). Nothing has been committed or pushed yet this session — still on the working tree from the last push (commit 53a0269).
+
 ## Next Immediate Step
-- Build mart_dora_metrics_daily.sql — at least 2 DORA metrics (Deployment Frequency + Lead Time for Changes), built on top of int_pr_lifecycle.sql
+- Review README.md tone/wording to make sure it reads as your own voice, not mine
+- Add the GH_TOKEN repo secret on GitHub, then commit + push so CI can actually run and go green
+- Once CI is green, this locked-in scope is complete

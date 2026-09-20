@@ -1,0 +1,24 @@
+version: 2
+
+models:
+  - name: stg_github__pull_requests
+    description: One row per pull request on the tracked GitHub repo, with timestamps cast and columns renamed to consistent staging conventions.
+    columns:
+      - name: pr_number
+        description: PR number, unique within the repo. Primary key of this model.
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_github__pr_reviews
+    description: One row per review left on a pull request. A PR can have zero, one, or many reviews, so pr_number is not unique here.
+    columns:
+      - name: review_id
+        description: GitHub's unique ID for the review. Primary key of this model.
+        tests:
+          - unique
+          - not_null
+      - name: pr_number
+        description: The PR this review belongs to. Not unique — one PR can have multiple reviews.
+        tests:
+          - not_null

@@ -1,0 +1,21 @@
+version: 2
+
+models:
+  - name: int_pr_lifecycle
+    description: One row per pull request, combining PR data with a rollup of its reviews into a single opened → reviewed → merged timeline.
+    columns:
+      - name: pr_number
+        description: Primary key of this model — one row per PR, reviews rolled up.
+        tests:
+          - unique
+          - not_null
+
+      - name: review_wait_hours
+        description: Hours between the PR opening and its first human review. Null when the PR was never reviewed.
+        tests:
+          - non_negative
+
+      - name: lead_time_hours
+        description: Hours between the PR opening and merging. Feeds the Lead Time for Changes DORA metric in mart_dora_metrics_daily. Null for PRs that haven't merged.
+        tests:
+          - non_negative

@@ -1,0 +1,5 @@
+dbt-core==1.11.15
+dbt-duckdb==1.11.0
+duckdb==1.5.5
+httpx==0.28.1
+pandas==3.0.5

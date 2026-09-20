@@ -1,0 +1,20 @@
+version: 2
+
+models:
+  - name: mart_dora_metrics_daily
+    description: One row per calendar day (full date spine, no gaps) with two DORA metrics computed from merged pull requests — Deployment Frequency and Lead Time for Changes.
+    columns:
+      - name: metric_date
+        description: Calendar day. Primary key of this model.
+        tests:
+          - unique
+          - not_null
+
+      - name: deployment_frequency
+        description: Count of PRs merged on this day (a merge is used as a proxy for a deployment — see README known limitations). 0 on days with no merges, never null.
+        tests:
+          - not_null
+          - non_negative
+
+      - name: avg_lead_time_hours
+        description: Average lead_time_hours across PRs merged this day. Null on zero-merge days — there's nothing to average, so it's left null rather than shown as 0.

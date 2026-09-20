@@ -1,0 +1,46 @@
+name: dbt CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  dbt-build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Configure dbt profile
+        run: |
+          mkdir -p ~/.dbt
+          cat > ~/.dbt/profiles.yml << 'EOF'
+          dpi_project:
+            outputs:
+              dev:
+                type: duckdb
+                path: dev.duckdb
+                threads: 4
+            target: dev
+          EOF
+
+      - name: Fetch latest PR + review data from GitHub
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: python fetch_prs.py
+
+      # `dbt build` runs every model and every test, in dependency order,
+      # against the data just fetched above — this is the real pass/fail gate.
+      - name: dbt build (models + tests)
+        run: dbt build

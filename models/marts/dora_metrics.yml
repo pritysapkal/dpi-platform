@@ -1,0 +1,49 @@
+semantic_models:
+  - name: dora_metrics_daily
+    description: Daily DORA metrics computed from merged pull requests in mart_dora_metrics_daily.
+    model: ref('mart_dora_metrics_daily')
+    defaults:
+      agg_time_dimension: metric_date
+
+    entities:
+      - name: dora_metrics_daily
+        type: primary
+        expr: metric_date
+
+    dimensions:
+      - name: metric_date
+        type: time
+        type_params:
+          time_granularity: day
+
+    measures:
+      - name: deployment_count
+        description: Count of PRs merged on this day. Additive across days.
+        agg: sum
+        expr: deployment_frequency
+
+      - name: avg_lead_time_hours_daily
+        description: >
+          Average of this mart's daily avg_lead_time_hours values — an average
+          of daily averages (each day weighted equally), not a PR-weighted
+          average across individual merges. A known limitation of building this
+          measure on a pre-aggregated mart rather than PR-grain data; see README.
+        agg: average
+        expr: avg_lead_time_hours
+
+metrics:
+  - name: deployment_frequency
+    description: Total pull requests merged (used as a proxy for deployments) over the selected period.
+    label: Deployment Frequency
+    type: simple
+    type_params:
+      measure: deployment_count
+
+  - name: lead_time_for_changes
+    description: >
+      Average hours between a PR opening and merging, over the selected period.
+      Computed as the average of mart_dora_metrics_daily's daily averages.
+    label: Lead Time for Changes (hrs)
+    type: simple
+    type_params:
+      measure: avg_lead_time_hours_daily
