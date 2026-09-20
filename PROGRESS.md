@@ -29,7 +29,7 @@ Focus: ONE data entity (Pull Requests) taken all the way through the full pipeli
 
 4. **Working CI/CD**
    - [x] .github/workflows/ci.yml that actually runs dbt build + dbt test on push
-   - [x] Must show a real passing (green) run on GitHub, not just exist unused — **confirmed green**: run #2 on commit f1cd57e, "Success", 3m 45s (2026-09-20)
+   - [x] Must show a real passing (green) run on GitHub, not just exist unused — **confirmed green**: current main tip db72faa, conclusion "success" (verified via GitHub Actions API, 2026-09-20)
 
 5. **Real documentation**
    - [x] README with: architecture diagram (Mermaid ok), data dictionary for the mart columns, "known limitations / what I'd do at scale" section
